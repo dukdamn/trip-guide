@@ -1,6 +1,6 @@
 # 여행 MD 작성법 v1.1
 
-어느 나라든 이 형식 하나로 씁니다. 빈 틀: [`templates/blank-trip.md`](../templates/blank-trip.md)
+어느 나라든 이 형식 하나로 씁니다. **[빌더](https://dukdamn.github.io/trip-guide/builder/)에서 쓰면 틀린 줄과 미리보기가 바로 보여요.** 빈 틀: [`templates/blank-trip.md`](../templates/blank-trip.md)
 예시: [다낭 4인](../trips/danang-2026.md) · [오사카 2인 샘플](../trips/sample-osaka.md)
 
 ---

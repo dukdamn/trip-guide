@@ -398,7 +398,10 @@ function renderMap() {
     layer = L.layerGroup().addTo(map);
   }
   layer.clearLayers();
-  spots.forEach((s, i) => L.marker([s.lat, s.lng]).bindPopup(`<b>${i + 1}. ${esc(s.name)}</b>`).addTo(layer));
+  // 이미지 없는 번호 핀 (CDN 이미지 경로 문제 없이 어디서나 동일하게 보임)
+  const pin = (n) => L.divIcon({ className: '', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12],
+    html: `<div style="width:24px;height:24px;border-radius:9999px;background:#0d9488;color:#fff;font:700 11px/24px system-ui;text-align:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)">${n}</div>` });
+  spots.forEach((s, i) => L.marker([s.lat, s.lng], { icon: pin(i + 1) }).bindPopup(`<b>${i + 1}. ${esc(s.name)}</b>`).addTo(layer));
   if (spots.length > 1) L.polyline(spots.map(s => [s.lat, s.lng]), { color: '#0d9488', weight: 3, opacity: .8, dashArray: '5,5' }).addTo(layer);
   if (spots.length === 1) map.setView([spots[0].lat, spots[0].lng], 15);
   else map.fitBounds(L.latLngBounds(spots.map(s => [s.lat, s.lng])), { padding: [24, 24], maxZoom: 15 });
@@ -679,6 +682,8 @@ function share() {
   renderHeader(); renderDayButtons(); renderTimeline(); renderMap();
   renderTripTab(); renderPlaces(); renderBudget(); initExpenseForm(); renderExpenses(); renderInfo();
   switchTab('plan');
+  // 화면 크기가 바뀌거나(회전) 숨겨진 상태에서 처음 보일 때 지도를 다시 맞춘다
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (map) { map.invalidateSize(); renderMap(); } }, 150); });
 })();
 </script>
 </body>

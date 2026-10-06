@@ -294,7 +294,8 @@ export async function resolveShortLinks(trip) {
 }
 
 // ── CLI ─────────────────────────────────────────────────────
-const isCli = import.meta.url === `file://${process.argv[1]}`;
+// 브라우저(빌더)에서 import할 때는 process가 없으므로 CLI 블록을 건너뛴다
+const isCli = typeof process !== 'undefined' && process.argv?.[1] && import.meta.url === `file://${process.argv[1]}`;
 if (isCli) {
   const fs = await import('fs');
   const path = await import('path');

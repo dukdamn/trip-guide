@@ -1,4 +1,4 @@
-# trip-guide (v0.3)
+# trip-guide (v0.4)
 
 MD 파일 하나로 **어느 나라든** 해외여행 가이드 웹페이지를 만드는 도구.
 
@@ -17,6 +17,11 @@ MD 파일 하나로 **어느 나라든** 해외여행 가이드 웹페이지를 
    (직접 or AI)
 ```
 
+**바로 써보기** → **[빌더](https://dukdamn.github.io/trip-guide/builder/)** · [다낭 예시](https://dukdamn.github.io/trip-guide/template.html?trip=trips/danang-2026.json)
+
+빌더에서: 불러오기(빈 틀/예시) → 편집하면 폰 화면 미리보기 → **HTML 다운로드** (카톡으로 보내면 끝)
+AI로 초안 받기: 빌더의 **[AI 프롬프트 복사]** → ChatGPT·Gemini·Claude(무료도 가능)에 붙여넣기 → 결과를 빌더에 붙여넣기
+
 ## 구조
 
 | 층 | 파일 | 내용 | 바뀌는 단위 |
@@ -28,6 +33,8 @@ MD 파일 하나로 **어느 나라든** 해외여행 가이드 웹페이지를 
 
 ```
 trip-guide/
+├── index.html              소개 페이지 (GitHub Pages 첫 화면)
+├── builder/index.html      브라우저 빌더: 편집 · 검사 · 미리보기 · HTML 다운로드 · 지도 핀 채우기
 ├── template.html           공통 화면 (데이터 블록이 비어 있으면 ?trip=경로 로 불러옴)
 ├── dist/                   빌드 결과: 여행별 HTML 파일 하나 (그대로 카톡·호스팅)
 ├── schema/
@@ -42,6 +49,7 @@ trip-guide/
 │   └── blank-trip.md       빈 여행 틀
 ├── docs/
 │   ├── md-format.md        MD 작성 규칙
+│   ├── ai-prompt.md        AI에게 MD 초안을 받는 프롬프트
 │   └── images/             README·블로그용 스크린샷
 └── tools/
     ├── build-html.mjs      MD → 완성 HTML 한 파일 (template + trip + pack)
@@ -59,6 +67,7 @@ npm run build:osaka      # 국가 팩 없는 나라 예시
 node tools/build-html.mjs trips/<내여행>.md [--resolve]   # --resolve: 짧은 구글맵 링크 → 좌표
 node tools/md2json.mjs trips/<내여행>.md -o trips/<내여행>.json   # JSON만
 npm run check:packs      # packs/*.json 검증
+npm run serve            # http://localhost:8080/builder/ 에서 빌더 실행 (file:// 로는 동작 안 함)
 ```
 
 호스팅할 때는 빌드 없이도 된다: `template.html?trip=trips/danang-2026.json` (팩은 `packs/<국가>.json`을 자동으로 불러옴)
@@ -78,10 +87,10 @@ npm run check:packs      # packs/*.json 검증
 1. ✅ 스키마 + 다낭 예시 + 변환기(CLI)
 1.1 ✅ 구글맵 링크 입력, 1인/전체 예산, 국가 팩 선택화, 시간대(오후:) 입력
 2. ✅ `template.html` 렌더러 + `build-html` (1인/전체 예산 전환, ko/ja/en, 팩 없는 나라 대응)
-3. ⬜ 브라우저 빌더: MD 붙여넣기 → 오류 표시 → 미리보기 → HTML 파일 하나로 내보내기 (+ 장소명으로 좌표 자동 채우기: OSM Nominatim, 서버 없음)
-4. ⬜ AI 프롬프트: 여행 조건 → MD 초안 (좌표·이동시간·예산 추정 포함)
+3. ✅ 브라우저 빌더 (검사·미리보기·HTML 다운로드·OSM 지도 핀 채우기) + GitHub Pages 배포 워크플로
+4. ✅ AI 프롬프트 v1 (`docs/ai-prompt.md`, 좌표는 지어내지 않고 구글맵 검색 링크로)
 5. ⬜ 국가 팩 늘리기 (jp, th, tw …)
-6. ⬜ GitHub Pages 배포 + 네이버 블로그 시리즈
+6. ⬜ 네이버 블로그 시리즈 · 지도 포함 스크린샷 교체
 
 ## 라이선스
 
