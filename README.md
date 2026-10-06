@@ -1,7 +1,10 @@
 # trip-guide (v0.3)
 
 MD 파일 하나로 **어느 나라든** 해외여행 가이드 웹페이지를 만드는 도구.
-예시: 다낭·호이안 3박 4일(4인, 실제 여행) · 오사카 2박 3일(2인, 형식 샘플)
+
+![다낭 3박 4일 예시 화면](docs/images/preview.png)
+
+<sub>예시: 2026년 9월 다낭·호이안 3박 4일 4인 여행 ([MD 원본](trips/danang-2026.md)) — 일정·동선 / 맛집·놀거리 / 1인↔전체 예산 / 현지정보·준비물. 그 외 샘플: [오사카 2박 3일](trips/sample-osaka.md)(국가 팩 없이)</sub>
 
 **쓰는 사람은 이것만 하면 된다**
 1. 맨 위에 제목·나라·날짜·인원 4줄
@@ -38,7 +41,8 @@ trip-guide/
 ├── templates/
 │   └── blank-trip.md       빈 여행 틀
 ├── docs/
-│   └── md-format.md        MD 작성 규칙
+│   ├── md-format.md        MD 작성 규칙
+│   └── images/             README·블로그용 스크린샷
 └── tools/
     ├── build-html.mjs      MD → 완성 HTML 한 파일 (template + trip + pack)
     ├── md2json.mjs         MD → JSON 변환 + 검증 (브라우저에서도 재사용)
@@ -78,3 +82,7 @@ npm run check:packs      # packs/*.json 검증
 4. ⬜ AI 프롬프트: 여행 조건 → MD 초안 (좌표·이동시간·예산 추정 포함)
 5. ⬜ 국가 팩 늘리기 (jp, th, tw …)
 6. ⬜ GitHub Pages 배포 + 네이버 블로그 시리즈
+
+## 라이선스
+
+[MIT](LICENSE)
