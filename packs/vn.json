@@ -1,0 +1,52 @@
+{
+  "code": "vn",
+  "name": { "ko": "베트남", "ja": "ベトナム", "en": "Vietnam" },
+  "emoji": "🇻🇳",
+  "asOf": "2026-09-23",
+  "timezone": "Asia/Ho_Chi_Minh",
+
+  "currency": {
+    "code": "VND",
+    "symbol": "₫",
+    "rates": { "KRW": 0.054, "JPY": 0.0057, "USD": 0.000038 },
+    "quickRule": { "ko": "뒤에 0 빼고 ÷ 2", "ja": "0を2つ取って半分 ≈ 円", "en": "÷ 26,000 ≈ USD" },
+    "calcExample": 50000
+  },
+
+  "power": {
+    "voltage": 220,
+    "plugs": ["A", "C"],
+    "note": { "ko": "한국 플러그(C/F)는 대부분 그대로 사용 가능", "ja": "日本の電化製品は変換プラグ(C型)と電圧の確認が必要", "en": "Type A/C sockets, 220V" }
+  },
+
+  "emergency": [
+    { "label": { "ko": "경찰", "ja": "警察", "en": "Police" }, "number": "113" },
+    { "label": { "ko": "화재", "ja": "消防", "en": "Fire" }, "number": "114" },
+    { "label": { "ko": "구급차", "ja": "救急車", "en": "Ambulance" }, "number": "115" }
+  ],
+
+  "transport": [
+    { "name": "Grab", "note": { "ko": "카드 자동결제 등록 필수. 공항·짐 많은 날은 7인승", "ja": "カード自動決済を登録しておく。荷物が多い日は7人乗り", "en": "Register a card for auto-pay. Use 7-seaters with luggage" } },
+    { "name": "Xanh SM", "note": { "ko": "전기차 택시 앱. 그랩이 안 잡힐 때 대안", "ja": "EVタクシーアプリ。Grabがつかまらない時に", "en": "EV taxi app, a Grab alternative" } }
+  ],
+
+  "phrases": [
+    { "emoji": "🌿", "meaning": { "ko": "고수 빼주세요", "ja": "パクチー抜きで", "en": "No coriander, please" }, "local": "Không cho rau mùi" },
+    { "emoji": "🧾", "meaning": { "ko": "계산서 주세요", "ja": "お会計お願いします", "en": "The bill, please" }, "local": "Tính tiền nhé" },
+    { "emoji": "❄️", "meaning": { "ko": "에어컨 틀어주세요", "ja": "エアコンをつけてください", "en": "Please turn on the AC" }, "local": "Bật điều hòa giúp tôi" },
+    { "emoji": "🧊", "meaning": { "ko": "얼음 좀 주세요", "ja": "氷をください", "en": "Some ice, please" }, "local": "Xin nước đá" },
+    { "emoji": "💸", "meaning": { "ko": "얼마예요?", "ja": "いくらですか?", "en": "How much?" }, "local": "Bao nhiêu tiền?" }
+  ],
+
+  "tips": [
+    { "title": { "ko": "택시보다 그랩", "ja": "タクシーよりGrab", "en": "Grab over street taxis" },
+      "body": { "ko": "길거리 택시는 잔돈을 안 주거나 돌아가는 경우가 많아요. 그랩 카드 자동결제를 쓰세요.", "ja": "流しのタクシーはお釣りをくれなかったり遠回りすることが多いので、Grabのカード決済を使いましょう。", "en": "Street taxis often overcharge. Use Grab with card auto-pay." } },
+    { "title": { "ko": "ATM 출금", "ja": "ATMでの引き出し", "en": "ATM withdrawals" },
+      "body": { "ko": "1회 한도가 300만~500만 동인 곳이 많고 건당 수수료가 붙어요. 원화 환산(DCC)은 거절하고 VND로 진행하세요.", "ja": "1回の上限が300万〜500万ドンの所が多く、手数料が毎回かかります。円換算(DCC)は断ってVNDで。", "en": "Limits are often 3–5M VND per withdrawal. Decline DCC and withdraw in VND." } },
+    { "title": { "ko": "환전", "ja": "両替", "en": "Currency exchange" },
+      "body": { "ko": "원화 5만 원권은 시내 금은방 환율이 좋은 편. 찢어지거나 낙서 있는 지폐는 피하세요. 20만·50만 동 지폐 색이 비슷해 헷갈리기 쉬워요.", "ja": "200,000ドンと500,000ドン札は色が似ているので注意。", "en": "200k and 500k VND notes look alike — double-check change." } },
+    { "title": { "ko": "입국", "ja": "入国", "en": "Entry" },
+      "body": { "ko": "한국·일본 여권은 무비자 체류(45일) 가능. 여권 유효기간 6개월 이상 필요.", "ja": "日本・韓国のパスポートはビザなしで45日滞在可能。残存期間6か月以上が必要。", "en": "Korean/Japanese passports: 45-day visa exemption. Passport must be valid for 6+ months." },
+      "verify": true }
+  ]
+}

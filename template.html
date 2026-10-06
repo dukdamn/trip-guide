@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Travel Guide</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root { --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); }
+    body { -webkit-tap-highlight-color: transparent; padding-bottom: calc(4.5rem + var(--sab));
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Hiragino Sans", "Pretendard", "Segoe UI", Roboto, sans-serif; }
+    .header-safe { padding-top: calc(0.5rem + var(--sat)); }
+    .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .done { text-decoration: line-through; opacity: .45; }
+    #map { height: 230px; width: 100%; border-radius: 1rem; z-index: 10; }
+    .tab-active { color: #0d9488 !important; border-bottom: 2px solid #0d9488 !important; font-weight: 700 !important; }
+    .leaflet-control-attribution { font-size: 8px !important; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased">
+
+  <!-- 데이터: 빌드 시 이 두 블록에 JSON이 들어간다. 비어 있으면 ?trip=경로 로 불러온다 -->
+  <script type="application/json" id="trip-data"></script>
+  <script type="application/json" id="pack-data"></script>
+
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm header-safe">
+    <div class="max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-2xl shrink-0" id="h-emoji">✈️</span>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-extrabold px-1.5 py-0.5 bg-teal-50 text-teal-700 rounded-md border border-teal-200/60 shrink-0 hidden" id="h-badge"></span>
+            <span class="text-[11px] font-semibold text-slate-400 truncate" id="h-dates"></span>
+          </div>
+          <h1 class="text-base font-black tracking-tight leading-tight truncate" id="h-title"></h1>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="toggleModal(true)" id="btn-stays" class="hidden px-2.5 py-1.5 bg-amber-50 active:bg-amber-100 border border-amber-200 text-amber-900 rounded-xl text-xs font-bold items-center gap-1">
+          <i class="fa-solid fa-hotel text-amber-600"></i><span data-t="staysBtn"></span>
+        </button>
+        <button onclick="share()" class="w-8 h-8 flex items-center justify-center bg-teal-600 active:bg-teal-700 text-white rounded-xl" aria-label="share">
+          <i class="fa-solid fa-share-nodes text-xs"></i>
+        </button>
+      </div>
+    </div>
+    <nav class="max-w-md mx-auto flex border-t border-slate-100 bg-white text-xs font-medium text-slate-500 overflow-x-auto no-scrollbar" id="tabs"></nav>
+  </header>
+
+  <main class="max-w-md mx-auto px-3.5 pt-3.5 space-y-4">
+
+    <!-- 일정 -->
+    <section id="sec-plan" class="space-y-3">
+      <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/80" id="map-card">
+        <div class="flex items-center justify-between mb-2 gap-2">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <div class="w-2 h-2 rounded-full bg-teal-500 animate-pulse shrink-0"></div>
+            <span class="text-xs font-bold truncate" id="map-title"></span>
+          </div>
+          <span class="text-[11px] text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-full shrink-0" id="map-count"></span>
+        </div>
+        <div id="map"></div>
+      </div>
+      <div class="flex gap-1 p-1 bg-slate-200/70 rounded-xl text-xs font-bold overflow-x-auto no-scrollbar" id="day-buttons"></div>
+      <div id="timeline" class="space-y-2.5"></div>
+    </section>
+
+    <!-- 항공·숙소 -->
+    <section id="sec-trip" class="hidden space-y-3"></section>
+
+    <!-- 장소 -->
+    <section id="sec-places" class="hidden space-y-3">
+      <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm hidden" id="dish-card">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-bowl-food text-teal-600"></i><span data-t="dishes"></span></h3>
+          <span class="text-[10px] font-bold text-teal-700" id="dish-count"></span>
+        </div>
+        <div id="dish-list" class="grid grid-cols-4 gap-1.5"></div>
+      </div>
+      <div class="space-y-1.5" id="place-filters">
+        <div id="type-filter" class="flex gap-1.5 overflow-x-auto no-scrollbar"></div>
+        <div id="area-filter" class="flex gap-1.5 overflow-x-auto no-scrollbar"></div>
+        <div class="flex items-center justify-between px-1 text-[10px] text-slate-500">
+          <label class="flex items-center gap-1"><input type="checkbox" id="plan-only" onchange="renderPlaces()" class="accent-teal-600"><span data-t="planOnly"></span></label>
+          <span id="place-count"></span>
+        </div>
+      </div>
+      <div id="place-list" class="space-y-3"></div>
+    </section>
+
+    <!-- 경비 -->
+    <section id="sec-money" class="hidden space-y-3">
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-receipt text-teal-600"></i><span data-t="expTitle"></span></h3>
+          <span class="text-[10px] text-slate-500" id="exp-people"></span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-slate-900 text-white rounded-xl p-2.5">
+            <span class="text-[10px] text-slate-400 block" data-t="spent"></span>
+            <span class="text-base font-black text-teal-300 block" id="exp-total"></span>
+            <span class="text-[10px] text-slate-400 block font-mono" id="exp-total-local"></span>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+            <span class="text-[10px] text-slate-500 block" data-t="perPersonVs"></span>
+            <span class="text-base font-black block" id="exp-pp"></span>
+            <div class="h-1.5 bg-slate-200 rounded-full mt-1 overflow-hidden"><div id="exp-bar" class="h-full bg-teal-500 rounded-full" style="width:0%"></div></div>
+            <span class="text-[10px] text-slate-500 block mt-0.5" id="exp-vs"></span>
+          </div>
+        </div>
+        <div class="space-y-2 pt-1 border-t border-slate-100">
+          <div class="grid grid-cols-2 gap-2">
+            <select id="exp-day" class="px-2 py-2 text-xs border border-slate-200 rounded-xl bg-white"></select>
+            <select id="exp-cat" class="px-2 py-2 text-xs border border-slate-200 rounded-xl bg-white"></select>
+          </div>
+          <input type="text" id="exp-name" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <div class="flex gap-2">
+            <input type="number" inputmode="decimal" id="exp-amount" class="flex-1 min-w-0 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <div class="flex bg-slate-100 rounded-xl p-0.5 text-[11px] font-bold shrink-0" id="cur-toggle"></div>
+            <button type="button" onclick="addExpense()" class="shrink-0 px-3.5 bg-teal-600 active:bg-teal-700 text-white rounded-xl text-xs font-bold" data-t="add"></button>
+          </div>
+        </div>
+        <div id="exp-cats" class="flex flex-wrap gap-1"></div>
+        <div id="exp-list" class="space-y-2"></div>
+        <button type="button" onclick="copyExpenses()" class="w-full py-2 bg-slate-100 active:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold"><i class="fa-regular fa-copy mr-1"></i><span data-t="copyLog"></span></button>
+        <p class="text-[10px] text-slate-400 leading-snug" data-t="storageNote"></p>
+      </div>
+
+      <div id="budget-card" class="hidden space-y-3">
+        <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-semibold text-slate-300" data-t="budget"></span>
+            <div class="flex bg-slate-700/60 rounded-lg p-0.5 text-[10px] font-bold" id="basis-toggle"></div>
+          </div>
+          <div class="mt-1 flex items-baseline justify-between gap-2">
+            <span class="text-2xl font-black text-teal-400 tracking-tight" id="budget-total"></span>
+            <span class="text-xs font-semibold text-slate-300 font-mono" id="budget-total-local"></span>
+          </div>
+          <p class="mt-2 pt-2 border-t border-slate-700/60 text-[11px] text-slate-400" id="budget-sub"></p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+          <div class="p-3 bg-slate-50/80 border-b border-slate-200 flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-700" data-t="budgetItems"></span>
+            <span class="text-[10px] text-slate-400" id="rate-label"></span>
+          </div>
+          <div class="divide-y divide-slate-100 text-xs" id="budget-items"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 정보 -->
+    <section id="sec-info" class="hidden space-y-3 text-xs"></section>
+  </main>
+
+  <!-- 숙소 카드 모달 -->
+  <div id="stays-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onclick="if(event.target===this)toggleModal(false)">
+    <div class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-2xl p-5 space-y-3 max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+        <span class="text-xs font-bold text-slate-500" data-t="staysModal"></span>
+        <button onclick="toggleModal(false)" class="w-7 h-7 flex items-center justify-center text-slate-400" aria-label="close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="stays-modal-list" class="space-y-3"></div>
+      <button onclick="toggleModal(false)" class="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold" data-t="close"></button>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white text-xs px-4 py-2 rounded-full shadow-lg opacity-0 transition-opacity pointer-events-none"></div>
+
+<script>
+// ================================================================
+// trip-guide — template.html
+// trip.json(+ 국가 팩)을 받아서 그리는 공통 화면. 데이터 규격: schema/trip.schema.json
+// ================================================================
+
+// ---------- 1. UI 문구 (ko / ja / en) ----------
+const I18N = {
+  ko: {
+    tabs: { plan: '일정', trip: '항공·숙소', places: '맛집·놀거리', money: '경비', info: '현지정보' },
+    staysBtn: '숙소', staysModal: '기사님께 보여줄 숙소', close: '닫기', openMap: '구글 지도 열기',
+    route: '길찾기', map: '지도', link: '참고', mapOf: (d) => `${d} 동선`, pins: (n) => `${n}곳`,
+    dayN: (n) => `Day ${n}`, planDay: (n) => `Day ${n} 일정`,
+    flights: '항공편', out: '가는 편', in: '오는 편', stays: '숙소', nights: (n) => `${n}박`,
+    dishes: '먹어볼 것', ate: (a, b) => `${a}/${b} 먹음`, all: '전체', allAreas: '모든 지역', planOnly: ' 일정에 넣은 곳만',
+    placeCount: (n, d) => `${n}곳 · ${d}곳 다녀옴`, noPlaces: '조건에 맞는 곳이 없어요',
+    types: { do: '놀거리', food: '맛집', cafe: '카페', night: '밤', shop: '쇼핑', care: '스파' },
+    tags: { booked: '예약', option: '옵션', tbd: '미정', free: '자유' },
+    slots: { dawn: '새벽', morning: '오전', noon: '점심', afternoon: '오후', evening: '저녁', night: '밤' },
+    expTitle: '실제 지출 기록', people: (n) => `${n}명`, spent: '쓴 돈 합계', perPersonVs: '1인당 / 예산 대비',
+    vs: (b, p) => `1인 예산 ${b} 대비 ${p}%`, add: '추가', expName: '내용 (예: 점심)', expAmount: '금액',
+    copyLog: '내역 텍스트 복사', storageNote: '※ 이 폰의 브라우저에만 저장돼요. 여행이 끝나면 "내역 텍스트 복사"로 백업해 두세요.',
+    noExp: '아직 기록이 없어요', del: '삭제', delQ: '삭제?', saved: '저장했어요', needAmount: '금액을 입력해 주세요',
+    copied: '복사했어요', nothing: '복사할 내역이 없어요', logHeader: (t) => `[${t} 지출 내역]`,
+    logTotal: (t, n, pp) => `합계 ${t} / ${n}명 → 1인 ${pp}`,
+    budget: '예상 예산', perPerson: '1인', group: (n) => `전체 ${n}명`, budgetItems: '예산 내역',
+    budgetSub: (pp, g) => `1인 ${pp} · 전체 ${g}`, basisTag: { perPerson: '1인', group: '공동' },
+    rate: (l, h) => `${l} ≈ ${h}`, noRate: '환율 미설정',
+    calc: '환율 계산기', calcPh: (x) => `현지 금액 (예: ${x})`, emergency: '긴급 번호', power: '전압·플러그',
+    transport: '교통', phrases: '보여주기용 문구 (터치 시 복사)', countryTips: (c) => `${c} 여행 팁`, tripTips: '이 여행 팁',
+    checklist: '준비물', verify: '출발 전 확인', asOf: (d) => `기준일 ${d}`, noPack: '이 나라의 국가 팩이 아직 없어서 기본 정보만 보여요.',
+    shareCopied: '링크를 복사했어요', categories: ['식비', '교통', '투어', '숙소', '쇼핑', '기타'],
+  },
+  ja: {
+    tabs: { plan: '日程', trip: '航空・ホテル', places: 'グルメ・遊び', money: '費用', info: '現地情報' },
+    staysBtn: 'ホテル', staysModal: '運転手に見せるホテル', close: '閉じる', openMap: 'Googleマップで開く',
+    route: 'ルート', map: '地図', link: '参考', mapOf: (d) => `${d} ルート`, pins: (n) => `${n}か所`,
+    dayN: (n) => `${n}日目`, planDay: (n) => `${n}日目の予定`,
+    flights: 'フライト', out: '往路', in: '復路', stays: 'ホテル', nights: (n) => `${n}泊`,
+    dishes: '食べたいもの', ate: (a, b) => `${a}/${b} 食べた`, all: 'すべて', allAreas: '全エリア', planOnly: ' 日程に入っている所だけ',
+    placeCount: (n, d) => `${n}件 · ${d}件 行った`, noPlaces: '条件に合う場所がありません',
+    types: { do: '遊び・観光', food: 'グルメ', cafe: 'カフェ', night: '夜遊び', shop: '買い物', care: 'スパ' },
+    tags: { booked: '予約', option: 'オプション', tbd: '未定', free: '自由' },
+    slots: { dawn: '早朝', morning: '午前', noon: '昼', afternoon: '午後', evening: '夕方', night: '夜' },
+    expTitle: '実際の支出記録', people: (n) => `${n}人`, spent: '支出合計', perPersonVs: '1人あたり / 予算比',
+    vs: (b, p) => `1人予算 ${b} に対し ${p}%`, add: '追加', expName: '内容 (例: ランチ)', expAmount: '金額',
+    copyLog: '記録をテキストでコピー', storageNote: '※ このスマホのブラウザにだけ保存されます。旅行後は「記録をテキストでコピー」でバックアップを。',
+    noExp: 'まだ記録がありません', del: '削除', delQ: '削除?', saved: '保存しました', needAmount: '金額を入力してください',
+    copied: 'コピーしました', nothing: 'コピーする記録がありません', logHeader: (t) => `[${t} 支出記録]`,
+    logTotal: (t, n, pp) => `合計 ${t} / ${n}人 → 1人 ${pp}`,
+    budget: '予算', perPerson: '1人', group: (n) => `全体 ${n}人`, budgetItems: '予算の内訳',
+    budgetSub: (pp, g) => `1人 ${pp} · 全体 ${g}`, basisTag: { perPerson: '1人', group: '共同' },
+    rate: (l, h) => `${l} ≈ ${h}`, noRate: '為替レート未設定',
+    calc: '為替計算', calcPh: (x) => `現地の金額 (例: ${x})`, emergency: '緊急番号', power: '電圧・プラグ',
+    transport: '交通', phrases: '見せるフレーズ (タップでコピー)', countryTips: (c) => `${c}旅行のコツ`, tripTips: 'この旅行のメモ',
+    checklist: '持ち物', verify: '出発前に確認', asOf: (d) => `基準日 ${d}`, noPack: 'この国のカントリーパックがまだないため、基本情報のみ表示しています。',
+    shareCopied: 'リンクをコピーしました', categories: ['食費', '交通', 'ツアー', '宿泊', '買い物', 'その他'],
+  },
+  en: {
+    tabs: { plan: 'Plan', trip: 'Flights·Stay', places: 'Places', money: 'Money', info: 'Info' },
+    staysBtn: 'Hotel', staysModal: 'Show to your driver', close: 'Close', openMap: 'Open in Google Maps',
+    route: 'Route', map: 'Map', link: 'Link', mapOf: (d) => `${d} route`, pins: (n) => `${n} stops`,
+    dayN: (n) => `Day ${n}`, planDay: (n) => `Day ${n}`,
+    flights: 'Flights', out: 'Outbound', in: 'Return', stays: 'Stays', nights: (n) => `${n} night${n > 1 ? 's' : ''}`,
+    dishes: 'Must-try food', ate: (a, b) => `${a}/${b} tried`, all: 'All', allAreas: 'All areas', planOnly: ' In plan only',
+    placeCount: (n, d) => `${n} places · ${d} visited`, noPlaces: 'Nothing matches',
+    types: { do: 'See & Do', food: 'Food', cafe: 'Cafe', night: 'Night', shop: 'Shopping', care: 'Spa' },
+    tags: { booked: 'Booked', option: 'Optional', tbd: 'TBD', free: 'Free' },
+    slots: { dawn: 'Dawn', morning: 'AM', noon: 'Noon', afternoon: 'PM', evening: 'Eve', night: 'Night' },
+    expTitle: 'Expense log', people: (n) => `${n} people`, spent: 'Total spent', perPersonVs: 'Per person / vs budget',
+    vs: (b, p) => `${p}% of ${b} budget`, add: 'Add', expName: 'What (e.g. lunch)', expAmount: 'Amount',
+    copyLog: 'Copy as text', storageNote: '※ Saved only in this browser. Copy as text to back up after the trip.',
+    noExp: 'No expenses yet', del: 'Delete', delQ: 'Sure?', saved: 'Saved', needAmount: 'Enter an amount',
+    copied: 'Copied', nothing: 'Nothing to copy', logHeader: (t) => `[${t} expenses]`,
+    logTotal: (t, n, pp) => `Total ${t} / ${n} → ${pp} each`,
+    budget: 'Budget', perPerson: 'Each', group: (n) => `All ${n}`, budgetItems: 'Budget items',
+    budgetSub: (pp, g) => `${pp} each · ${g} total`, basisTag: { perPerson: 'each', group: 'shared' },
+    rate: (l, h) => `${l} ≈ ${h}`, noRate: 'No exchange rate',
+    calc: 'Currency calculator', calcPh: (x) => `Local amount (e.g. ${x})`, emergency: 'Emergency', power: 'Power',
+    transport: 'Getting around', phrases: 'Phrases (tap to copy)', countryTips: (c) => `${c} tips`, tripTips: 'Trip notes',
+    checklist: 'Packing list', verify: 'Check before you go', asOf: (d) => `as of ${d}`, noPack: 'No country pack yet — showing basics only.',
+    shareCopied: 'Link copied', categories: ['Food', 'Transport', 'Tours', 'Stay', 'Shopping', 'Other'],
+  },
+};
+const TAG_STYLE = { booked: 'bg-amber-50 text-amber-700 border-amber-200', option: 'bg-sky-50 text-sky-700 border-sky-200', tbd: 'bg-rose-50 text-rose-600 border-rose-200', free: 'bg-violet-50 text-violet-700 border-violet-200' };
+const TYPE_ORDER = ['do', 'food', 'cafe', 'night', 'shop', 'care'];
+
+// ---------- 2. 상태 ----------
+let TRIP, PACK, T, LANG, RATE, LOCAL, HOME, PEOPLE, STORE_KEY;
+let curDay = 0, placeType = 'all', placeArea = 'all', expCurrency = 'local', basisMode = 'perPerson', map, layer;
+
+// ---------- 3. 유틸 ----------
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pick = (i18n) => i18n ? (i18n[LANG] ?? i18n.ko ?? i18n.en ?? Object.values(i18n)[0]) : '';
+const mapUrl = (p, fallback) => p?.url || 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p?.q || fallback || '');
+const LOCALE = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' };
+function money(n, cur) {
+  if (n == null || !Number.isFinite(n)) return '-';
+  const digits = ['KRW', 'JPY', 'VND', 'IDR', 'KHR', 'LAK', 'HUF', 'ISK'].includes(cur) || Math.abs(n) >= 100 ? 0 : 2;
+  try { return new Intl.NumberFormat(LOCALE[LANG], { style: 'currency', currency: cur, minimumFractionDigits: 0, maximumFractionDigits: digits }).format(n); }
+  catch { return `${Math.round(n).toLocaleString()} ${cur}`; }
+}
+const toHome = (amount, cur) => (cur === HOME ? amount : RATE ? amount * RATE : null);
+const toLocal = (amount, cur) => (cur === HOME ? (RATE ? amount / RATE : null) : amount);
+function dateLabel(iso, withWeekday = true) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  const md = `${d.getMonth() + 1}/${d.getDate()}`;
+  return withWeekday ? `${md}(${new Intl.DateTimeFormat(LOCALE[LANG], { weekday: 'short' }).format(d)})` : md;
+}
+function store() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; } }
+function save(patch) {
+  const cur = store(); Object.assign(cur, patch);
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(cur)); return true; } catch { return false; }
+}
+function toast(msg) { const el = $('toast'); el.innerText = msg; el.style.opacity = '1'; clearTimeout(toast.t); toast.t = setTimeout(() => el.style.opacity = '0', 1800); }
+function copy(text, msg) { navigator.clipboard?.writeText(text).then(() => toast(msg ?? T.copied), () => toast(text)); }
+function chip(label, active, onclick) {
+  return `<button type="button" onclick="${onclick}" class="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border ${active ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'}">${label}</button>`;
+}
+function toggleDone(key, on) { const done = store().done || {}; if (on) done[key] = 1; else delete done[key]; save({ done }); }
+
+// ---------- 4. 데이터 불러오기 ----------
+async function loadData() {
+  const read = (id) => { const t = $(id).textContent.trim(); return t ? JSON.parse(t) : null; };
+  let trip = read('trip-data'), pack = read('pack-data');
+  const inlined = !!trip;                       // 빌드된 파일이면 팩도 이미 들어 있음 (없으면 팩 없는 나라)
+  const qs = new URLSearchParams(location.search);
+  if (!trip && qs.get('trip')) trip = await fetch(qs.get('trip')).then(r => r.json());
+  if (trip && !pack && !inlined) {
+    const base = qs.get('packs') ?? 'packs/';
+    pack = await fetch(`${base}${trip.meta.country}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  }
+  return { trip, pack };
+}
+
+// ---------- 5. 렌더링 ----------
+function renderHeader() {
+  const m = TRIP.meta;
+  document.title = m.title;
+  document.documentElement.lang = LANG;
+  $('h-emoji').textContent = m.emoji || '✈️';
+  $('h-title').textContent = m.title;
+  $('h-dates').textContent = `${dateLabel(m.startDate)} ~ ${dateLabel(m.endDate)}`;
+  if (m.badge) { $('h-badge').textContent = m.badge; $('h-badge').classList.remove('hidden'); }
+  if (TRIP.stays?.length) $('btn-stays').classList.replace('hidden', 'flex');
+  document.querySelectorAll('[data-t]').forEach(el => { const v = T[el.dataset.t]; if (typeof v === 'string') el.textContent = v; });
+  $('exp-name').placeholder = T.expName; $('exp-amount').placeholder = T.expAmount;
+
+  const tabs = [['plan', 'fa-regular fa-calendar-check'], ['trip', 'fa-solid fa-plane-departure', !!(TRIP.flights?.length || TRIP.stays?.length)],
+    ['places', 'fa-solid fa-utensils', !!(TRIP.places?.length || TRIP.dishes?.length)], ['money', 'fa-solid fa-coins'], ['info', 'fa-regular fa-lightbulb']];
+  $('tabs').innerHTML = tabs.filter(t => t[2] !== false).map(([k, icon]) =>
+    `<button onclick="switchTab('${k}')" id="tab-${k}" class="flex-1 py-3 px-2 text-center whitespace-nowrap"><i class="${icon} mr-1"></i>${T.tabs[k]}</button>`).join('');
+}
+
+function switchTab(k) {
+  ['plan', 'trip', 'places', 'money', 'info'].forEach(t => { $('sec-' + t).classList.toggle('hidden', t !== k); $('tab-' + t)?.classList.toggle('tab-active', t === k); });
+  if (k === 'plan' && map) setTimeout(() => map.invalidateSize(), 200);
+  window.scrollTo({ top: 0 });
+}
+
+// --- 일정 ---
+function dayTitle(d) { return d.label ? `${T.dayN(d.day)} · ${d.label}` : T.dayN(d.day); }
+function renderDayButtons() {
+  $('day-buttons').innerHTML = TRIP.days.map((d, i) => `
+    <button onclick="selectDay(${i})" class="flex-1 min-w-[4.5rem] py-2 px-1 rounded-lg transition-all text-center ${i === curDay ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600'}">
+      <span class="block text-[9px] text-slate-400 font-normal">${esc(dateLabel(d.date))}</span>
+      <span class="block truncate">${esc(d.label || T.dayN(d.day))}</span>
+    </button>`).join('');
+}
+function selectDay(i) { curDay = i; renderDayButtons(); renderTimeline(); renderMap(); }
+
+function timeLabel(it) {
+  if (it.time) return `<span class="text-xs font-black text-teal-700 font-mono shrink-0">${it.time}</span>`;
+  if (it.slot) return `<span class="text-[10px] font-black text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded shrink-0">${T.slots[it.slot]}</span>`;
+  return `<span class="text-xs text-slate-300 shrink-0">•</span>`;
+}
+function renderTimeline() {
+  const d = TRIP.days[curDay], done = store().done || {};
+  $('timeline').innerHTML = d.items.map((it, i) => {
+    const key = `plan|${d.day}|${i}|${it.title}`, on = !!done[key];
+    return `
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex items-start gap-2.5 flex-1 min-w-0">
+          <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleDone(${esc(JSON.stringify(key))}, this.checked); this.closest('div').querySelector('h4').classList.toggle('done', this.checked)" class="w-4 h-4 mt-0.5 accent-teal-600 shrink-0">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              ${timeLabel(it)}
+              <h4 class="text-xs sm:text-sm font-bold ${on ? 'done' : ''}">${esc(it.title)}</h4>
+              ${it.tag ? `<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${TAG_STYLE[it.tag]}">${T.tags[it.tag]}</span>` : ''}
+            </div>
+            ${it.desc ? `<p class="text-[11px] text-slate-500 mt-1 leading-snug break-keep">${esc(it.desc)}</p>` : ''}
+          </div>
+        </div>
+        <div class="flex flex-col gap-1 shrink-0">
+          ${it.place ? `<a href="${esc(mapUrl(it.place, it.title))}" target="_blank" rel="noopener" class="px-2 py-1 bg-slate-100 active:bg-teal-50 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 flex items-center gap-1"><i class="fa-solid fa-diamond-turn-right text-teal-600"></i>${T.route}</a>` : ''}
+          ${it.link ? `<a href="${esc(it.link)}" target="_blank" rel="noopener" class="px-2 py-1 bg-white text-slate-500 text-[11px] font-bold rounded-lg border border-slate-200 flex items-center gap-1"><i class="fa-solid fa-link"></i>${T.link}</a>` : ''}
+        </div>
+      </div>
+      ${it.transit ? `<div class="mt-2.5 ml-6 inline-flex items-center text-[10px] font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200/70"><i class="fa-solid fa-arrow-down-long mr-1.5 text-teal-600"></i>${esc(it.transit)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// --- 지도 (좌표 있는 일정만 핀) ---
+function renderMap() {
+  const d = TRIP.days[curDay];
+  const spots = [];
+  d.items.forEach(it => {
+    const p = it.place; if (p?.lat == null) return;
+    const last = spots[spots.length - 1];
+    if (last && last.lat === p.lat && last.lng === p.lng) return;
+    spots.push({ lat: p.lat, lng: p.lng, name: it.title });
+  });
+  // 그날 좌표가 하나도 없으면 지도 카드를 숨긴다 (짧은 링크만 있는 날 등)
+  const show = spots.length > 0 && typeof L !== 'undefined';
+  $('map-card').classList.toggle('hidden', !show);
+  if (!show) return;
+  $('map-title').textContent = T.mapOf(dayTitle(d));
+  $('map-count').textContent = T.pins(new Set(spots.map(s => s.lat + ',' + s.lng)).size);
+  if (!map) {
+    map = L.map('map', { zoomControl: false, dragging: !L.Browser.mobile, tap: false });
+    map.setView([spots[0].lat, spots[0].lng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OSM' }).addTo(map);
+    layer = L.layerGroup().addTo(map);
+  }
+  layer.clearLayers();
+  spots.forEach((s, i) => L.marker([s.lat, s.lng]).bindPopup(`<b>${i + 1}. ${esc(s.name)}</b>`).addTo(layer));
+  if (spots.length > 1) L.polyline(spots.map(s => [s.lat, s.lng]), { color: '#0d9488', weight: 3, opacity: .8, dashArray: '5,5' }).addTo(layer);
+  if (spots.length === 1) map.setView([spots[0].lat, spots[0].lng], 15);
+  else map.fitBounds(L.latLngBounds(spots.map(s => [s.lat, s.lng])), { padding: [24, 24], maxZoom: 15 });
+}
+
+// --- 항공·숙소 ---
+function renderTripTab() {
+  let html = '';
+  if (TRIP.flights?.length) {
+    html += `<div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-2.5">
+      <h3 class="text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-plane text-teal-600"></i> ${T.flights}</h3>
+      ${TRIP.flights.map(f => `<div class="bg-slate-50 p-3 rounded-xl border border-slate-200/50 space-y-1">
+        <div class="flex justify-between items-center text-xs font-bold ${f.dir === 'out' ? 'text-teal-800' : 'text-slate-800'}">
+          <span>${T[f.dir]} · ${esc(dateLabel(f.date))}</span><span class="text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded">${esc(f.route)}</span></div>
+        ${f.time ? `<p class="text-xs text-slate-700">${esc(f.time)}</p>` : ''}
+        ${f.note ? `<p class="text-[11px] text-slate-500">${esc(f.note)}</p>` : ''}
+        ${f.link ? `<a href="${esc(f.link)}" target="_blank" rel="noopener" class="text-[11px] font-bold text-teal-700 underline">${T.link}</a>` : ''}
+      </div>`).join('')}</div>`;
+  }
+  if (TRIP.stays?.length) {
+    html += `<div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-2.5">
+      <h3 class="text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-bed text-amber-600"></i> ${T.stays}</h3>
+      ${TRIP.stays.map(s => {
+        const n = Math.round((new Date(s.checkOut) - new Date(s.checkIn)) / 864e5);
+        return `<div class="border border-slate-200 rounded-xl p-3 space-y-1">
+          <div class="flex justify-between items-start gap-2">
+            <div class="min-w-0"><span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">${esc(dateLabel(s.checkIn, false))} ~ ${esc(dateLabel(s.checkOut, false))}${n > 0 ? ' · ' + T.nights(n) : ''}</span>
+              <h4 class="text-sm font-bold mt-1">${esc(s.name)}</h4></div>
+            <a href="${esc(mapUrl(s.place, s.name))}" target="_blank" rel="noopener" class="shrink-0 px-2 py-1 bg-slate-100 text-[11px] font-bold text-teal-700 rounded-lg">${T.map}</a>
+          </div>
+          ${s.note ? `<p class="text-[11px] text-slate-500">${esc(s.note)}</p>` : ''}
+        </div>`;
+      }).join('')}</div>`;
+    $('stays-modal-list').innerHTML = TRIP.stays.map(s => `
+      <div class="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl space-y-1">
+        <span class="text-[10px] font-extrabold text-amber-800 block">${esc(dateLabel(s.checkIn, false))} ~ ${esc(dateLabel(s.checkOut, false))}</span>
+        <p class="text-base font-black">${esc(s.name)}</p>
+        <a href="${esc(mapUrl(s.place, s.name))}" target="_blank" rel="noopener" class="inline-block mt-1 text-[11px] font-bold text-teal-700 underline">${T.openMap}</a>
+      </div>`).join('');
+  }
+  $('sec-trip').innerHTML = html;
+}
+function toggleModal(open) { $('stays-modal').classList.toggle('hidden', !open); }
+
+// --- 장소 ---
+function setPlaceType(t) { placeType = t; renderPlaces(); }
+function setPlaceArea(a) { placeArea = a; renderPlaces(); }
+function renderDishes() {
+  const dishes = TRIP.dishes || [];
+  $('dish-card').classList.toggle('hidden', !dishes.length);
+  if (!dishes.length) return;
+  const done = store().done || {};
+  $('dish-count').textContent = T.ate(dishes.filter(d => done['dish|' + d.name]).length, dishes.length);
+  $('dish-list').innerHTML = dishes.map(d => {
+    const on = !!done['dish|' + d.name];
+    return `<button type="button" onclick="toggleDone(${esc(JSON.stringify('dish|' + d.name))}, ${!on}); renderDishes()" class="p-1.5 rounded-xl border text-center ${on ? 'bg-teal-50 border-teal-300' : 'bg-slate-50 border-slate-200'}">
+      <span class="block text-[11px] font-bold ${on ? 'text-teal-700' : ''}">${on ? '✓ ' : ''}${esc(d.name)}</span>
+      ${d.desc ? `<span class="block text-[9px] text-slate-400 leading-tight mt-0.5">${esc(d.desc)}</span>` : ''}
+    </button>`;
+  }).join('');
+}
+function renderPlaces() {
+  renderDishes();
+  const places = TRIP.places || [];
+  $('place-filters').classList.toggle('hidden', !places.length);
+  if (!places.length) { $('place-list').innerHTML = ''; return; }
+  const done = store().done || {};
+  const areas = [...new Set(places.map(p => p.area).filter(Boolean))];
+  const types = TYPE_ORDER.filter(t => places.some(p => p.type === t));
+  const count = (t) => places.filter(p => p.type === t).length;
+  $('type-filter').innerHTML = chip(`${T.all} ${places.length}`, placeType === 'all', "setPlaceType('all')") + types.map(t => chip(`${T.types[t]} ${count(t)}`, placeType === t, `setPlaceType('${t}')`)).join('');
+  $('area-filter').innerHTML = areas.length > 1 ? chip(T.allAreas, placeArea === 'all', "setPlaceArea('all')") + areas.map(a => chip(esc(a), placeArea === a, `setPlaceArea(${esc(JSON.stringify(a))})`)).join('') : '';
+  const planOnly = $('plan-only').checked;
+  const list = places.filter(p => (placeType === 'all' || p.type === placeType) && (placeArea === 'all' || p.area === placeArea) && (!planOnly || p.plan != null));
+  $('place-count').textContent = T.placeCount(list.length, list.filter(p => done['place|' + p.name]).length);
+  if (!list.length) { $('place-list').innerHTML = `<p class="text-[11px] text-slate-400 text-center py-6">${T.noPlaces}</p>`; return; }
+  const groups = areas.length ? areas.filter(a => list.some(p => p.area === a)) : [null];
+  if (list.some(p => !p.area) && areas.length) groups.push(null);
+  $('place-list').innerHTML = groups.map(area => `
+    <div>${area ? `<h4 class="text-[11px] font-extrabold text-slate-500 px-1 mb-1.5">${esc(area)}</h4>` : ''}
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm divide-y divide-slate-100">
+      ${list.filter(p => (p.area ?? null) === area).map(p => {
+        const key = 'place|' + p.name, on = !!done[key];
+        return `<div class="flex items-start gap-2.5 p-3">
+          <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleDone(${esc(JSON.stringify(key))}, this.checked); renderPlaces()" class="w-4 h-4 mt-0.5 accent-teal-600 shrink-0">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">${T.types[p.type]}</span>
+              ${p.plan != null ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">${T.planDay(p.plan)}</span>` : ''}
+              ${p.status ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">${esc(p.status)}</span>` : ''}
+            </div>
+            <h5 class="text-xs font-bold mt-1 ${on ? 'done' : ''}">${esc(p.name)}</h5>
+            ${p.desc || p.price ? `<p class="text-[11px] text-slate-500 leading-snug mt-0.5">${esc(p.desc ?? '')}${p.desc && p.price ? ' · ' : ''}${p.price ? `<b class="text-slate-700">${esc(p.price)}</b>` : ''}</p>` : ''}
+            ${p.note ? `<p class="text-[10px] text-teal-800 mt-1">💡 ${esc(p.note)}</p>` : ''}
+          </div>
+          <div class="flex flex-col gap-1 shrink-0">
+            <a href="${esc(mapUrl(p.place, p.name))}" target="_blank" rel="noopener" class="px-2 py-1 bg-slate-100 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 flex items-center gap-1"><i class="fa-solid fa-location-dot text-teal-600"></i>${T.map}</a>
+            ${p.link ? `<a href="${esc(p.link)}" target="_blank" rel="noopener" class="px-2 py-1 bg-white text-slate-500 text-[11px] font-bold rounded-lg border border-slate-200 flex items-center gap-1"><i class="fa-solid fa-link"></i>${T.link}</a>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// --- 예산 (1인 ↔ 전체) ---
+function budgetValues() {
+  const b = TRIP.budget; if (!b) return null;
+  return b.items.map(it => {
+    const basis = it.basis ?? b.basis;
+    const cur = it.currency ?? LOCAL;
+    const local = toLocal(it.amount, cur);                   // 현지 통화 기준 금액
+    const pp = basis === 'group' ? local / PEOPLE : local;     // 1인 환산
+    return { ...it, basis, cur, local, pp, group: pp * PEOPLE };
+  });
+}
+function setBasis(m) { basisMode = m; renderBudget(); }
+function renderBudget() {
+  const rows = budgetValues();
+  $('budget-card').classList.toggle('hidden', !rows);
+  if (!rows) return;
+  const key = basisMode === 'group' ? 'group' : 'pp';
+  const sum = rows.reduce((s, r) => s + (r[key] ?? 0), 0);
+  const ppSum = rows.reduce((s, r) => s + (r.pp ?? 0), 0);
+  $('basis-toggle').innerHTML = ['perPerson', 'group'].map(m =>
+    `<button onclick="setBasis('${m}')" class="px-2 py-1 rounded-md ${basisMode === m ? 'bg-white text-slate-900' : 'text-slate-300'}">${m === 'group' ? T.group(PEOPLE) : T.perPerson}</button>`).join('');
+  $('budget-total').textContent = RATE ? money(toHome(sum, LOCAL), HOME) : money(sum, LOCAL);
+  $('budget-total-local').textContent = RATE ? money(sum, LOCAL) : '';
+  $('budget-sub').textContent = RATE ? T.budgetSub(money(toHome(ppSum, LOCAL), HOME), money(toHome(ppSum * PEOPLE, LOCAL), HOME)) : T.budgetSub(money(ppSum, LOCAL), money(ppSum * PEOPLE, LOCAL));
+  $('rate-label').textContent = RATE ? T.rate(money(rateExample(), LOCAL), money(rateExample() * RATE, HOME)) : T.noRate;
+  $('budget-items').innerHTML = rows.map(r => `
+    <div class="p-3 flex justify-between items-center gap-2">
+      <div class="min-w-0">
+        <span class="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">${esc(r.cat)}</span>
+        <span class="text-[9px] text-slate-400 ml-1">${T.basisTag[r.basis]}</span>
+        <p class="font-bold text-xs mt-0.5">${esc(r.name)}</p>
+      </div>
+      <div class="text-right shrink-0">
+        <span class="font-extrabold text-xs block">${RATE ? money(toHome(r[key], LOCAL), HOME) : money(r[key], LOCAL)}</span>
+        ${RATE ? `<span class="text-[10px] text-slate-400 font-mono">${money(r[key], LOCAL)}</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+function rateExample() { const r = RATE; if (!r) return 1; const e = PACK?.currency?.calcExample; if (e) return e; return Math.pow(10, Math.max(0, Math.round(Math.log10(1 / r)) + 1)); }
+
+// --- 지출 기록 ---
+function setExpCurrency(c) { expCurrency = c; renderCurToggle(); }
+function renderCurToggle() {
+  const opts = [['local', PACK?.currency?.symbol || LOCAL]]; if (HOME !== LOCAL && RATE) opts.push(['home', HOME === 'KRW' ? '원' : HOME === 'JPY' ? '円' : HOME]);
+  $('cur-toggle').innerHTML = opts.map(([k, l]) => `<button type="button" onclick="setExpCurrency('${k}')" class="px-2.5 rounded-lg ${expCurrency === k ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500'}">${esc(l)}</button>`).join('');
+}
+const expHome = (e) => (e.currency === HOME ? e.amount : RATE ? e.amount * RATE : null);
+const expLocal = (e) => (e.currency === HOME ? (RATE ? e.amount / RATE : 0) : e.amount);
+function addExpense() {
+  const amount = parseFloat($('exp-amount').value);
+  if (!amount || amount <= 0) return toast(T.needAmount);
+  const e = { id: Date.now().toString(36), day: +$('exp-day').value, cat: $('exp-cat').value, name: $('exp-name').value.trim() || $('exp-cat').value, amount, currency: expCurrency === 'home' ? HOME : LOCAL };
+  const list = store().expenses || []; list.push(e);
+  if (save({ expenses: list })) { $('exp-name').value = ''; $('exp-amount').value = ''; toast(T.saved); renderExpenses(); }
+}
+let pendingDel = null;
+function delExpense(id, btn) {
+  if (pendingDel !== id) { pendingDel = id; btn.textContent = T.delQ; btn.classList.add('text-rose-600'); setTimeout(() => { if (pendingDel === id) { pendingDel = null; renderExpenses(); } }, 2500); return; }
+  pendingDel = null; save({ expenses: (store().expenses || []).filter(e => e.id !== id) }); renderExpenses();
+}
+function fmtBoth(local, home) { return RATE ? money(home, HOME) : money(local, LOCAL); }
+function renderExpenses() {
+  const list = store().expenses || [];
+  const tLocal = list.reduce((s, e) => s + expLocal(e), 0);
+  const tHome = RATE ? list.reduce((s, e) => s + expHome(e), 0) : null;
+  $('exp-people').textContent = T.people(PEOPLE);
+  $('exp-total').textContent = fmtBoth(tLocal, tHome);
+  $('exp-total-local').textContent = RATE ? money(tLocal, LOCAL) : '';
+  $('exp-pp').textContent = fmtBoth(tLocal / PEOPLE, tHome != null ? tHome / PEOPLE : null);
+  const rows = budgetValues();
+  const budgetPP = rows ? rows.reduce((s, r) => s + r.pp, 0) : 0;
+  const pct = budgetPP ? Math.round(tLocal / PEOPLE / budgetPP * 100) : 0;
+  $('exp-vs').textContent = budgetPP ? T.vs(fmtBoth(budgetPP, RATE ? budgetPP * RATE : null), pct) : '';
+  $('exp-bar').style.width = Math.min(pct, 100) + '%';
+  $('exp-bar').className = 'h-full rounded-full ' + (pct > 100 ? 'bg-rose-500' : 'bg-teal-500');
+  const byCat = {}; list.forEach(e => byCat[e.cat] = (byCat[e.cat] || 0) + expLocal(e));
+  $('exp-cats').innerHTML = Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">${esc(c)} ${fmtBoth(v, RATE ? v * RATE : null)}</span>`).join('');
+  if (!list.length) { $('exp-list').innerHTML = `<p class="text-[11px] text-slate-400 text-center py-3">${T.noExp}</p>`; return; }
+  $('exp-list').innerHTML = TRIP.days.map((d, i) => [d, i]).filter(([, i]) => list.some(e => e.day === i)).map(([d, i]) => {
+    const items = list.filter(e => e.day === i), sumL = items.reduce((s, e) => s + expLocal(e), 0);
+    return `<div class="border border-slate-200 rounded-xl overflow-hidden">
+      <div class="flex justify-between px-3 py-1.5 bg-slate-50 text-[11px] font-bold text-slate-600"><span>${esc(dateLabel(d.date))} · ${esc(T.dayN(d.day))}</span><span>${fmtBoth(sumL, RATE ? sumL * RATE : null)}</span></div>
+      <div class="divide-y divide-slate-100">${items.map(e => `
+        <div class="flex items-center justify-between gap-2 px-3 py-2 text-xs">
+          <div class="min-w-0"><span class="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">${esc(e.cat)}</span><span class="font-bold ml-1">${esc(e.name)}</span></div>
+          <div class="flex items-center gap-2 shrink-0">
+            <div class="text-right"><span class="font-extrabold block">${fmtBoth(expLocal(e), expHome(e))}</span>${RATE ? `<span class="text-[10px] text-slate-400 font-mono">${money(e.amount, e.currency)}</span>` : ''}</div>
+            <button type="button" onclick="delExpense('${e.id}', this)" class="text-[10px] font-bold text-slate-400 px-1">${T.del}</button>
+          </div>
+        </div>`).join('')}</div></div>`;
+  }).join('');
+}
+function copyExpenses() {
+  const list = store().expenses || [];
+  if (!list.length) return toast(T.nothing);
+  const lines = [T.logHeader(TRIP.meta.title)];
+  TRIP.days.forEach((d, i) => {
+    const items = list.filter(e => e.day === i); if (!items.length) return;
+    lines.push(`\n${dateLabel(d.date)}`);
+    items.forEach(e => lines.push(`- [${e.cat}] ${e.name}: ${fmtBoth(expLocal(e), expHome(e))}${RATE ? ` (${money(e.amount, e.currency)})` : ''}`));
+  });
+  const tL = list.reduce((s, e) => s + expLocal(e), 0), tH = RATE ? tL * RATE : null;
+  lines.push('\n' + T.logTotal(fmtBoth(tL, tH), PEOPLE, fmtBoth(tL / PEOPLE, tH != null ? tH / PEOPLE : null)));
+  copy(lines.join('\n'), T.copied);
+}
+function initExpenseForm() {
+  $('exp-day').innerHTML = TRIP.days.map((d, i) => `<option value="${i}">${esc(dateLabel(d.date))} · ${esc(T.dayN(d.day))}</option>`).join('');
+  $('exp-day').value = String(curDay);
+  const cats = [...new Set([...(TRIP.budget?.items.map(b => b.cat) ?? []), ...T.categories])];
+  $('exp-cat').innerHTML = cats.map(c => `<option>${esc(c)}</option>`).join('');
+  renderCurToggle();
+}
+
+// --- 현지정보 ---
+function renderInfo() {
+  const P = PACK, card = (title, icon, body, extra = '') => `<div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-2">
+    <div class="flex items-center justify-between gap-2"><h3 class="font-bold text-xs flex items-center gap-1.5"><i class="${icon} text-teal-600"></i>${title}</h3>${extra}</div>${body}</div>`;
+  let html = '';
+  if (RATE && LOCAL !== HOME) {
+    const ex = rateExample();
+    html += card(T.calc, 'fa-solid fa-calculator', `
+      <div class="flex items-center gap-2">
+        <input type="number" inputmode="decimal" placeholder="${esc(T.calcPh(ex.toLocaleString()))}" oninput="$('calc-out').textContent = money((parseFloat(this.value)||0) * RATE, HOME)" class="flex-1 min-w-0 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+        <i class="fa-solid fa-arrow-right text-slate-300"></i>
+        <div class="flex-1 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl font-bold" id="calc-out">${money(0, HOME)}</div>
+      </div>
+      <p class="text-[10px] text-slate-400">${T.rate(money(ex, LOCAL), money(ex * RATE, HOME))}${TRIP.meta.rate?.asOf ? ' · ' + T.asOf(TRIP.meta.rate.asOf) : ''}</p>`,
+      P?.currency?.quickRule ? `<span class="text-[10px] text-teal-600 font-bold bg-teal-50 px-1.5 py-0.5 rounded">${esc(pick(P.currency.quickRule))}</span>` : '');
+  }
+  if (P?.phrases?.length) html += card(T.phrases, 'fa-solid fa-comment-dots', `<div class="grid grid-cols-2 gap-2">${P.phrases.map(ph => `
+    <button type="button" onclick="copy(${esc(JSON.stringify(ph.local))})" class="text-left p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl active:bg-slate-100">
+      <span class="text-[11px] font-bold text-teal-800 block">${esc(ph.emoji ?? '')} ${esc(pick(ph.meaning))}</span>
+      <span class="text-[10px] text-slate-500 block mt-0.5">${esc(ph.local)}</span></button>`).join('')}</div>`);
+  if (TRIP.tips?.length) html += card(T.tripTips, 'fa-regular fa-note-sticky', `<ul class="space-y-1.5 text-[11px] text-slate-600">${TRIP.tips.map(t => `<li class="flex gap-1.5"><span class="text-teal-600 font-bold">•</span><span>${esc(t)}</span></li>`).join('')}</ul>`);
+  if (P?.tips?.length) html += card(T.countryTips(pick(P.name)), 'fa-solid fa-shield-halved', `<ul class="space-y-2 text-[11px] text-slate-600">${P.tips.map(t => `
+    <li><b class="text-slate-800">${esc(pick(t.title))}</b>${t.verify ? ` <span class="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1 rounded">${T.verify}</span>` : ''}<br>${esc(pick(t.body))}</li>`).join('')}</ul>`,
+    P.asOf ? `<span class="text-[10px] text-slate-400">${T.asOf(P.asOf)}</span>` : '');
+  const quick = [];
+  if (P?.emergency?.length) quick.push(`<div><b class="text-slate-800">${T.emergency}</b><div class="flex flex-wrap gap-1.5 mt-1">${P.emergency.map(e => `<a href="tel:${esc(e.number)}" class="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg font-bold text-[11px]">${esc(pick(e.label))} ${esc(e.number)}</a>`).join('')}</div></div>`);
+  if (P?.power) quick.push(`<div><b class="text-slate-800">${T.power}</b><p class="text-[11px] text-slate-600 mt-0.5">${P.power.voltage ? P.power.voltage + 'V' : ''}${P.power.plugs ? ' · ' + P.power.plugs.join('/') + ' type' : ''}${P.power.note ? ' · ' + esc(pick(P.power.note)) : ''}</p></div>`);
+  if (P?.transport?.length) quick.push(`<div><b class="text-slate-800">${T.transport}</b>${P.transport.map(t => `<p class="text-[11px] text-slate-600 mt-0.5"><b>${esc(t.name)}</b>${t.note ? ' — ' + esc(pick(t.note)) : ''}</p>`).join('')}</div>`);
+  if (quick.length) html += card(pick(P.name) || '', 'fa-solid fa-circle-info', `<div class="space-y-2.5">${quick.join('')}</div>`);
+  if (TRIP.checklist?.length) {
+    const done = store().done || {};
+    html += card(T.checklist, 'fa-solid fa-suitcase', TRIP.checklist.map(g => `
+      <div><p class="text-[10px] font-extrabold text-slate-500 mb-1">${esc(g.group)}</p>
+      ${g.items.map(it => { const k = 'check|' + g.group + '|' + it; return `<label class="flex items-center gap-2 py-1 text-[11px]"><input type="checkbox" ${done[k] ? 'checked' : ''} onchange="toggleDone(${esc(JSON.stringify(k))}, this.checked); this.nextElementSibling.classList.toggle('done', this.checked)" class="accent-teal-600"><span class="${done[k] ? 'done' : ''}">${esc(it)}</span></label>`; }).join('')}</div>`).join(''));
+  }
+  if (!P) html += `<p class="text-[11px] text-slate-400 text-center py-2">${T.noPack}</p>`;
+  $('sec-info').innerHTML = html;
+}
+
+function share() {
+  if (navigator.share) navigator.share({ title: TRIP.meta.title, url: location.href }).catch(() => {});
+  else copy(location.href, T.shareCopied);
+}
+
+// ---------- 6. 시작 ----------
+(async function init() {
+  const { trip, pack } = await loadData();
+  if (!trip) { document.querySelector('main').innerHTML = '<p class="text-center text-sm text-slate-500 py-20">trip 데이터가 없어요. (?trip=trips/xxx.json)</p>'; return; }
+  TRIP = trip; PACK = pack;
+  LANG = I18N[trip.meta.lang] ? trip.meta.lang : 'ko'; T = I18N[LANG];
+  LOCAL = trip.meta.currency; HOME = trip.meta.homeCurrency || 'KRW'; PEOPLE = trip.meta.people || 1;
+  RATE = trip.meta.rate?.value ?? (LOCAL === HOME ? 1 : pack?.currency?.rates?.[HOME]) ?? null;
+  STORE_KEY = 'trip-guide:' + (trip.meta.id || trip.meta.title) + ':' + LANG;
+  basisMode = PEOPLE > 1 ? 'group' : 'perPerson';
+  // 여행 중이면 오늘 날짜를 기본 선택
+  const today = new Date().toISOString().slice(0, 10);
+  const idx = trip.days.findIndex(d => d.date === today);
+  curDay = idx >= 0 ? idx : 0;
+
+  renderHeader(); renderDayButtons(); renderTimeline(); renderMap();
+  renderTripTab(); renderPlaces(); renderBudget(); initExpenseForm(); renderExpenses(); renderInfo();
+  switchTab('plan');
+})();
+</script>
+</body>
+</html>

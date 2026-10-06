@@ -1,0 +1,189 @@
+{
+  "schemaVersion": "1.1",
+  "meta": {
+    "title": "오사카 2박 3일 (샘플)",
+    "emoji": "🇯🇵",
+    "startDate": "2026-11-20",
+    "endDate": "2026-11-22",
+    "people": 2,
+    "country": "jp",
+    "currency": "JPY",
+    "homeCurrency": "KRW",
+    "lang": "ko",
+    "rate": {
+      "value": 9.1
+    }
+  },
+  "flights": [
+    {
+      "dir": "out",
+      "date": "2026-11-20",
+      "route": "인천 → 간사이",
+      "time": "10:30 도착"
+    },
+    {
+      "dir": "in",
+      "date": "2026-11-22",
+      "route": "간사이 → 인천",
+      "time": "19:00 출발"
+    }
+  ],
+  "stays": [
+    {
+      "name": "난바 호텔",
+      "checkIn": "2026-11-20",
+      "checkOut": "2026-11-22",
+      "note": "난바역 도보 5분",
+      "place": {
+        "url": "https://www.google.com/maps/search/?api=1&query=Namba+Station+Osaka",
+        "q": "Namba Station Osaka"
+      }
+    }
+  ],
+  "days": [
+    {
+      "day": 1,
+      "label": "난바·도톤보리",
+      "items": [
+        {
+          "time": "12:00",
+          "title": "체크인 전 짐 맡기기",
+          "place": {
+            "url": "https://www.google.com/maps/search/?api=1&query=Namba+Station+Osaka",
+            "q": "Namba Station Osaka"
+          }
+        },
+        {
+          "slot": "afternoon",
+          "title": "도톤보리 구경",
+          "desc": "글리코 간판 사진",
+          "transit": "도보",
+          "place": {
+            "url": "https://www.google.com/maps/place/Dotonbori/@34.6687,135.5013,17z",
+            "lat": 34.6687,
+            "lng": 135.5013,
+            "q": "Dotonbori"
+          }
+        },
+        {
+          "slot": "evening",
+          "title": "오코노미야키",
+          "tag": "tbd",
+          "desc": "도톤보리 근처에서"
+        },
+        {
+          "title": "쿠로몬 시장은 시간 남으면",
+          "tag": "option"
+        }
+      ],
+      "date": "2026-11-20"
+    },
+    {
+      "day": 2,
+      "label": "유니버설",
+      "items": [
+        {
+          "time": "08:00",
+          "title": "USJ 입장",
+          "tag": "booked",
+          "desc": "익스프레스 패스",
+          "place": {
+            "url": "https://www.google.com/maps/search/?api=1&query=Universal+Studios+Japan",
+            "q": "Universal Studios Japan"
+          }
+        },
+        {
+          "slot": "night",
+          "title": "우메다 야경",
+          "tag": "free",
+          "place": {
+            "url": "https://www.google.com/maps/search/?api=1&query=Umeda+Sky+Building",
+            "q": "Umeda Sky Building"
+          }
+        }
+      ],
+      "date": "2026-11-21"
+    },
+    {
+      "day": 3,
+      "label": "귀국",
+      "items": [
+        {
+          "slot": "morning",
+          "title": "신사이바시 쇼핑",
+          "tag": "free"
+        },
+        {
+          "time": "16:00",
+          "title": "공항 이동",
+          "transit": "난카이 라피트 약 40분"
+        }
+      ],
+      "date": "2026-11-22"
+    }
+  ],
+  "places": [
+    {
+      "type": "food",
+      "area": "난바",
+      "name": "오코노미야키 가게",
+      "price": "1,500엔~",
+      "place": {
+        "url": "https://www.google.com/maps/search/?api=1&query=okonomiyaki+Dotonbori",
+        "q": "okonomiyaki Dotonbori"
+      }
+    },
+    {
+      "type": "night",
+      "area": "난바",
+      "name": "이자카야",
+      "note": "자리값(오토시) 있음"
+    },
+    {
+      "type": "shop",
+      "area": "난바",
+      "name": "돈키호테 도톤보리점",
+      "desc": "면세 가능",
+      "place": {
+        "url": "https://www.google.com/maps/search/?api=1&query=Don+Quijote+Dotonbori",
+        "q": "Don Quijote Dotonbori"
+      }
+    }
+  ],
+  "budget": {
+    "basis": "perPerson",
+    "items": [
+      {
+        "cat": "교통",
+        "name": "난카이 라피트 왕복",
+        "amount": 2900,
+        "basis": "perPerson"
+      },
+      {
+        "cat": "입장",
+        "name": "USJ 1일권 + 익스프레스",
+        "amount": 25000,
+        "basis": "perPerson"
+      },
+      {
+        "cat": "통신",
+        "name": "eSIM 3일",
+        "amount": 15000,
+        "currency": "KRW",
+        "basis": "perPerson"
+      },
+      {
+        "cat": "숙소",
+        "name": "난바 호텔 2박",
+        "amount": 36000,
+        "basis": "group"
+      },
+      {
+        "cat": "식비",
+        "name": "2박 3일 식비",
+        "amount": 12000,
+        "basis": "perPerson"
+      }
+    ]
+  }
+}

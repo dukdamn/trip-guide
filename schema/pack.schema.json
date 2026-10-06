@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pack.schema.json",
+  "title": "Country Pack",
+  "description": "국가별 공통 정보. 같은 나라 여행끼리 재사용한다. 다국어 문자열은 { ko, ja, en } 객체(i18n)로 쓴다.",
+  "type": "object",
+  "required": ["code", "name", "currency", "asOf"],
+  "additionalProperties": false,
+  "properties": {
+    "code":     { "type": "string", "pattern": "^[a-z]{2}$" },
+    "name":     { "$ref": "#/$defs/i18n" },
+    "emoji":    { "type": "string" },
+    "asOf":     { "type": "string", "format": "date", "description": "팩 정보 기준일. 화면에 '출발 전 확인' 안내와 함께 표시" },
+    "timezone": { "type": "string", "description": "IANA 타임존. 예: Asia/Ho_Chi_Minh" },
+
+    "currency": {
+      "type": "object",
+      "required": ["code", "symbol", "rates"],
+      "additionalProperties": false,
+      "properties": {
+        "code":   { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "symbol": { "type": "string" },
+        "rates":  {
+          "type": "object",
+          "description": "현지 통화 1단위 → 각 통화. 여행 MD의 rate가 있으면 그게 우선",
+          "patternProperties": { "^[A-Z]{3}$": { "type": "number", "exclusiveMinimum": 0 } },
+          "additionalProperties": false
+        },
+        "quickRule": { "$ref": "#/$defs/i18n", "description": "암산 요령. 예: 0 하나 빼고 ÷2" },
+        "calcExample": { "type": "number", "description": "계산기 placeholder 예시 금액" }
+      }
+    },
+
+    "power": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "voltage": { "type": "integer" },
+        "plugs":   { "type": "array", "items": { "type": "string", "pattern": "^[A-N]$" } },
+        "note":    { "$ref": "#/$defs/i18n" }
+      }
+    },
+
+    "emergency": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "number"],
+        "additionalProperties": false,
+        "properties": { "label": { "$ref": "#/$defs/i18n" }, "number": { "type": "string" } }
+      }
+    },
+
+    "transport": {
+      "type": "array",
+      "description": "주로 쓰는 이동 수단·앱",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": { "name": { "type": "string" }, "note": { "$ref": "#/$defs/i18n" } }
+      }
+    },
+
+    "phrases": {
+      "type": "array",
+      "description": "터치하면 복사되는 현지 회화. local은 현지어 원문",
+      "items": {
+        "type": "object",
+        "required": ["local", "meaning"],
+        "additionalProperties": false,
+        "properties": {
+          "emoji":   { "type": "string" },
+          "meaning": { "$ref": "#/$defs/i18n" },
+          "local":   { "type": "string" }
+        }
+      }
+    },
+
+    "tips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "body"],
+        "additionalProperties": false,
+        "properties": {
+          "title":  { "$ref": "#/$defs/i18n" },
+          "body":   { "$ref": "#/$defs/i18n" },
+          "verify": { "type": "boolean", "description": "true면 '출발 전 확인' 배지 (비자·입국 규정 등 바뀌는 정보)" }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "i18n": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": { "ko": { "type": "string" }, "ja": { "type": "string" }, "en": { "type": "string" } }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "trip-guide",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "MD로 쓰는 해외여행 가이드 웹페이지",
+  "scripts": {
+    "build:danang": "node tools/build-html.mjs trips/danang-2026.md",
+    "build:osaka": "node tools/build-html.mjs trips/sample-osaka.md",
+    "json:danang": "node tools/md2json.mjs trips/danang-2026.md -o trips/danang-2026.json",
+    "check:packs": "node tools/check-packs.mjs"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}
